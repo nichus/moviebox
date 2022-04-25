@@ -9,7 +9,8 @@ const mongoose = require('mongoose');
 const Disc = require('./models/disc');
 
 // use .env to save credentials...
-mongoose.connect(mongoUrl(), {useNewUrlParser: true, useUnifiedTopology: true})
+const mongoUrl = buildMongoUrl(process.env.mongouser,process.env.mongopass,process.env.mongourl,process.env.mongodb);
+mongoose.connect(mongoUrl, {useNewUrlParser: true, useUnifiedTopology: true})
   .then((results) =>  {
     console.log('connected to db');
     app.listen(3000, () => console.log('started...'));
@@ -52,6 +53,6 @@ async function search(ctx) {
       });
 };
 
-function mongoUrl(user,pass,host,port,db) {
- return "mongodb://" + process.env.mongouser + ":" + process.env.mongopass + "@" + process.env.mongohost + ":" + process.env.mongoport + "/" + process.env.mongodb + "?authSource=admin";
+function buildMongoUrl(user,pass,url,db) {
+ return "mongodb://" + user + ":" + pass + "@" + url + "/" + db + "?authSource=admin";
 }
