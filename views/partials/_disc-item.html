@@ -1,0 +1,8 @@
+<tr>
+  <td><%- disc.disc %></td>
+  <td><%- disc.title %><% if(disc.subtitle) { %>[<%- disc.subtitle %>]<% } %></td>
+  <td><%- disc.episodeStart %><% if (disc.episodeStart && disc.episodeEnd) { %> - <% } %><%- disc.episodeEnd %></td>
+  <td><%- disc.movie %></td>
+  <td><%- disc.rating %></td>
+  <td><%- disc.xbox %></td>
+</tr>
