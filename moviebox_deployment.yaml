@@ -1,0 +1,118 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: moviebox-deployment
+  labels:
+    app: moviebox
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: moviebox
+  template:
+    metadata:
+      labels:
+        app: moviebox
+    spec:
+      containers:
+      - image: node:17
+        name: moviebox
+        workingDir: /code/moviebox
+        command: ['npm', 'start']
+        ports:
+        - containerPort: 3000
+        volumeMounts:
+        - mountPath: "/code"
+          name: moviebox-code
+        env:
+        - name: mongodb
+          value: videos
+        - name: mongouser
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: mongo-root-username
+        - name: mongopass
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: mongo-root-password
+        - name: mongourl
+          valueFrom:
+            configMapKeyRef:
+              name: mongodb-configmap
+              key: database_url
+      initContainers:
+      - name: git-sync
+        image: k8s.gcr.io/git-sync/git-sync:v3.3.0
+        env:
+        - name: GIT_SYNC_REPO
+          value: https://github.com/nichus/moviebox
+        - name: GIT_SYNC_ROOT
+          value: /data
+        - name: GIT_SYNC_DEST
+          value: "moviebox"
+        - name: GIT_SYNC_BRANCH
+          value: "main"
+        - name: GIT_SYNC_ONE_TIME
+          value: "true"
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - mountPath: /data
+          name: moviebox-code
+      - name: npm-install
+        image: node:17
+        workingDir: /code/moviebox
+        command: ['npm', 'install']
+        volumeMounts:
+        - mountPath: /code
+          name: moviebox-code
+      volumes:
+      - name: moviebox-code
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: moviebox-service
+  namespace: default
+spec:
+  selector:
+    app: moviebox
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: moviebox-route
+spec:
+  entryPoints: # We listen to requests coming from ports 80 and 443
+    - web
+    - websecure
+  routes:
+    - match: Host(`moviebox.home.icebergh.us`)
+      kind: Rule
+      services:
+        - name: moviebox-service # Requests will be forwarded to this service
+          port: 3000
+  tls:
+    secretName: moviebox.home.icebergh.us
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: moviebox.home.icebergh.us
+spec:
+  dnsNames:
+    - moviebox.home.icebergh.us
+  secretName: moviebox.home.icebergh.us
+  issuerRef:
+    name: selfsigned # Use the issuer created previously
+    kind: ClusterIssuer

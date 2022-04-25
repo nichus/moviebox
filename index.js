@@ -4,6 +4,7 @@ const Koa = require('koa');
 const KoaRouter = require('koa-router');
 const path = require('path');
 const render = require('koa-ejs');
+const static = require('koa-static');
 const bodyParser = require('koa-bodyparser');
 const mongoose = require('mongoose');
 const Disc = require('./models/disc');
@@ -21,6 +22,8 @@ const app = new Koa();
 const router = new KoaRouter();
 
 app.use(bodyParser());
+
+app.use(static('public'));
 
 app.use(router.routes()).use(router.allowedMethods());
 
@@ -45,7 +48,8 @@ async function index(ctx) {
 };
 async function search(ctx) {
   const params = ctx.request.body;
-  var result = await Disc.find({ title: new RegExp(params.filter,'i')}).exec();
+  const filter = params.filter.trim();
+  var result = await Disc.find({ title: new RegExp(filter,'i')}).exec();
   await ctx.render('index', {
         title: 'Moviebox Inventory - Filtered',
         filter: params.filter,
